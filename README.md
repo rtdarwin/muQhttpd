@@ -25,7 +25,7 @@ muQhttpd - A simple `one thread per connection` http server.
 Run the command below with a POSIX-compatible shell.
 
 ```
-mkdir cmake-build && cd cmake-build && make
+mkdir cmake-build && cd cmake-build && cmake .. && make
 ```
 
 ## 3. Run
