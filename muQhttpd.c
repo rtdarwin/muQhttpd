@@ -50,7 +50,7 @@ main(int argc, char* argv[])
     struct sockaddr_in srv_sockaddr;
 
     if ((srv_sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        alog(LOG_LEVEL_FATEL, "couldn't open socket");
+        alog(LOG_LEVEL_FATEL, "Couldn't open socket");
         exit(EXIT_FAILURE);
     }
 
@@ -60,24 +60,25 @@ main(int argc, char* argv[])
     srv_sockaddr.sin_port = htons(conf->v4port);
 
     char ipv4_pbuf[INET_ADDRSTRLEN];
+    memset(ipv4_pbuf, 0, sizeof(ipv4_pbuf));
     inet_ntop(AF_INET, (void*)&srv_sockaddr.sin_addr, ipv4_pbuf,
               INET_ADDRSTRLEN);
 
     if (bind(srv_sockfd, (struct sockaddr*)&srv_sockaddr,
              sizeof(srv_sockaddr)) == -1) {
-        alog(LOG_LEVEL_FATEL, "couldn't bind socket to IPv4 addr %ld:%ld",
-             ipv4_pbuf, conf->v4port);
+        alog(LOG_LEVEL_FATEL, "Couldn't bind socket to IPv4 addr %s:%ld",
+             ipv4_pbuf, (long)conf->v4port);
         exit(EXIT_FAILURE);
     }
 
     if (listen(srv_sockfd, 32) == -1) {
-        alog(LOG_LEVEL_FATEL, "couldn't listen IPv4 addr %ld:%ld", ipv4_pbuf,
-             conf->v4port);
+        alog(LOG_LEVEL_FATEL, "Couldn't listen IPv4 addr %s:%ld", ipv4_pbuf,
+             (long)conf->v4port);
         exit(EXIT_FAILURE);
     }
 
-    alog(LOG_LEVEL_INFO, "muQhttpd running on %ld:%ld, muQ, muQ...", ipv4_pbuf,
-         conf->v4port);
+    alog(LOG_LEVEL_INFO, "muQhttpd running on %s:%ld, muQ, muQ...", ipv4_pbuf,
+         (long)conf->v4port);
 
     /*  6. accept client conncetion */
 
@@ -85,19 +86,22 @@ main(int argc, char* argv[])
     struct sockaddr_in cl_addr;
     socklen_t cl_add_len = sizeof(cl_addr);
 
+    if (conf->max_thread_num != 0)
+        max_http_handler_threads_num(conf->max_thread_num);
+
     for (;;) {
         cl_sockfd = accept(srv_sockfd, (struct sockaddr*)&cl_addr, &cl_add_len);
 
         if (cl_sockfd == -1) {
             alog(LOG_LEVEL_ERROR,
-                 "syscall accept return invalid client_sockfd");
+                 "Syscall accept return invalid client_sockfd");
             continue;
         }
 
         inet_ntop(AF_INET, (void*)&cl_addr.sin_addr, ipv4_pbuf,
                   INET_ADDRSTRLEN);
-        alog(LOG_LEVEL_INFO, "receive connection from %ld:%ld", (long)ipv4_pbuf,
-             (long)cl_addr.sin_port);
+        alog(LOG_LEVEL_INFO, "Receive connection from %s:%ld", ipv4_pbuf,
+             (long)ntohs(cl_addr.sin_port));
         handle_http(cl_sockfd);
     }
 

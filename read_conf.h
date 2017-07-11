@@ -7,7 +7,7 @@
 struct muQconf
 {
     uint16_t v4port;
-    size_t max_thread_num;
+    int max_thread_num;
     int log_level;
 };
 
