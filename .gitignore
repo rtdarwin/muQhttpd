@@ -1,0 +1,7 @@
+# directories
+cmake-build
+
+# temporary files
+*~
+*.log
+
