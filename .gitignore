@@ -5,3 +5,7 @@ cmake-build
 *~
 *.log
 
+# gtags files
+GTAGS
+GRTAGS
+GPATH

@@ -49,7 +49,7 @@ At startup, muQhttpd will read the configuration file `muqhttpd.conf` from `--co
 
 Configuration file specifies:
 
-1. IPv4 and IPv6 addresses to bind and listen.
+1. IPv4 address to bind and listen.
 1. Maximum thread number allowed.
 1. Log level
 
