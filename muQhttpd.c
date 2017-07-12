@@ -1,5 +1,5 @@
 #include "async_log.h"
-#include "handle_http.h"
+#include "handle_connection.h"
 #include "read_cmdline.h"
 #include "read_conf.h"
 
@@ -87,9 +87,12 @@ main(int argc, char* argv[])
     int cl_sockfd;
     struct sockaddr_in cl_addr;
     socklen_t cl_add_len = sizeof(cl_addr);
+    struct client_info cl_info;
 
     if (conf->max_thread_num != 0)
-        max_http_handler_threads_num(conf->max_thread_num);
+        set_max_connection_handler_threads(conf->max_thread_num);
+    else
+        set_max_connection_handler_threads(1024);
 
     for (;;) {
         cl_sockfd = accept(srv_sockfd, (struct sockaddr*)&cl_addr, &cl_add_len);
@@ -104,7 +107,11 @@ main(int argc, char* argv[])
                   INET_ADDRSTRLEN);
         alog(LOG_LEVEL_INFO, "Receive connection from %s:%ld", ipv4_pbuf,
              (long)ntohs(cl_addr.sin_port));
-        handle_http(cl_sockfd);
+
+        snprintf(cl_info.ipv4addr, INET_ADDRSTRLEN, "%s", ipv4_pbuf);
+        cl_info.port = ntohs(cl_addr.sin_port);
+        cl_info.sockfd = cl_sockfd;
+        handle_connection(&cl_info);
     }
 
     return 0;
