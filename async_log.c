@@ -7,11 +7,15 @@
 #include <string.h>
 #include <time.h>
 
+#include <fcntl.h>
 #include <mqueue.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define min(m, n) ((m) < (n) ? (m) : (n))
+#define max(m, n) ((m) > (n) ? (m) : (n))
 
 // Preprocessor directives below are used to make gettid() avaiable
 // Maybe it's not elegant and not portable, but through this we can
@@ -30,8 +34,8 @@
 #endif
 
 static int min_log_level_;
-char* logdir_;
-mqd_t msgq_;
+static mqd_t msgq_;
+static size_t max_msg_len_;
 
 /* 20170707 11:11:11.125737
  *     17           1  6
@@ -51,28 +55,38 @@ get_curr_time(char* buf)
 }
 
 static void
-write_log(char* buf, size_t len)
+write_log(char* buf, size_t buf_len)
 {
-    mq_send(msgq_, buf, len, 0);
+    size_t msglen = min(buf_len, max_msg_len_);
+    mq_send(msgq_, buf, msglen, 0);
 
     // for debug use when developing
-    write(STDOUT_FILENO, buf, len);
+    write(STDOUT_FILENO, buf, buf_len);
 }
 
 void
 init_logger(char* logdir, int log_level)
 {
-    logdir_ = logdir;
+    min_log_level_ = log_level;
 
-    int o_flags = O_CREAT | O_EXCL | O_NONBLOCK;
-    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    int o_flags = O_RDWR | O_CREAT | O_EXCL;
+    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH; /* rw-r--r-- */
+    mq_unlink("/muQhttpd_log"); /* ensure a new msgq */
     msgq_ = mq_open("/muQhttpd_log", o_flags, perms, NULL);
     if (msgq_ == -1) {
-        fprintf(stderr, "Error when initing async_log module\n");
+        fprintf(stderr, "Error when initing async_log module"
+                        ": couldn't open POSIX message queue"
+                        " - %s:%d\n",
+                __FILE__, __LINE__);
         exit(EXIT_FAILURE);
     }
+    mq_unlink("/muQhttpd_log");
 
-    min_log_level_ = log_level;
+    struct mq_attr msgq_attr;
+    mq_getattr(msgq_, &msgq_attr);
+    max_msg_len_ = msgq_attr.mq_msgsize;
+
+    init_logger_backend(msgq_, logdir);
 }
 
 void

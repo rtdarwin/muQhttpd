@@ -50,7 +50,7 @@ main(int argc, char* argv[])
     struct sockaddr_in srv_sockaddr;
 
     if ((srv_sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        alog(LOG_LEVEL_FATEL, "Couldn't open socket");
+        fprintf(stderr, "Couldn't open socket\n");
         exit(EXIT_FAILURE);
     }
 
@@ -66,17 +66,19 @@ main(int argc, char* argv[])
 
     if (bind(srv_sockfd, (struct sockaddr*)&srv_sockaddr,
              sizeof(srv_sockaddr)) == -1) {
-        alog(LOG_LEVEL_FATEL, "Couldn't bind socket to IPv4 addr %s:%ld",
-             ipv4_pbuf, (long)conf->v4port);
+        fprintf(stderr, "Couldn't bind socket to IPv4 addr %s:%ld", ipv4_pbuf,
+                (long)conf->v4port);
         exit(EXIT_FAILURE);
     }
 
     if (listen(srv_sockfd, 32) == -1) {
-        alog(LOG_LEVEL_FATEL, "Couldn't listen IPv4 addr %s:%ld", ipv4_pbuf,
-             (long)conf->v4port);
+        fprintf(stderr, "Couldn't listen to IPv4 addr %s:%ld", ipv4_pbuf,
+                (long)conf->v4port);
         exit(EXIT_FAILURE);
     }
 
+    fprintf(stdout, "muQhttpd running on %s:%ld, muQ, muQ...", ipv4_pbuf,
+            (long)conf->v4port);
     alog(LOG_LEVEL_INFO, "muQhttpd running on %s:%ld, muQ, muQ...", ipv4_pbuf,
          (long)conf->v4port);
 
