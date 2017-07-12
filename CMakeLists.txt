@@ -10,7 +10,8 @@ set(CMAKE_C_FLAGS
  -g \
  -Wall \
  -Wextra \
- -pthread"
+ -pthread \
+ -lrt"
  )
 
 # ========================================

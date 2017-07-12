@@ -5,9 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#include <mqueue.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 
 // Preprocessor directives below are used to make gettid() avaiable
@@ -27,6 +30,8 @@
 #endif
 
 static int min_log_level_;
+char* logdir_;
+mqd_t msgq_;
 
 /* 20170707 11:11:11.125737
  *     17           1  6
@@ -45,26 +50,35 @@ get_curr_time(char* buf)
     snprintf(buf + 17, 1 + 6 + 1, ".%.6ld", tv.tv_usec);
 }
 
-void
+static void
 write_log(char* buf, size_t len)
 {
-    // TODO: write to msgq
+    mq_send(msgq_, buf, len, 0);
 
+    // for debug use when developing
     write(STDOUT_FILENO, buf, len);
 }
 
 void
 init_logger(char* logdir, int log_level)
 {
+    logdir_ = logdir;
 
-    // TODO: create a tid-msgq map
+    int o_flags = O_CREAT | O_EXCL | O_NONBLOCK;
+    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    msgq_ = mq_open("/muQhttpd_log", o_flags, perms, NULL);
+    if (msgq_ == -1) {
+        fprintf(stderr, "Error when initing async_log module\n");
+        exit(EXIT_FAILURE);
+    }
 
     min_log_level_ = log_level;
 }
 
 void
-set_log_level(int log_level)
+change_log_level(int log_level)
 {
+    min_log_level_ = log_level;
 }
 
 void
@@ -120,7 +134,11 @@ alog(int log_level, char* fmt, ...)
                   fmt, arg_list);
     va_end(arg_list);
 
-    /*  4. line feed */
+    /*  4. line feed
+     *
+     *     Here we don't add a terminating '\0', because variable
+     *     'tot_written' can determine its boundary.
+     */
 
     logbuf[tot_written++] = '\n';
 

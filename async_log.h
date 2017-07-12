@@ -7,10 +7,11 @@
 #define LOG_LEVEL_INFO 1
 #define LOG_LEVEL_DEBUG 0
 
-#define MAX_LOG_LENGTH 1024
+/* 900 = 1024 - 124, 124 reserved for time, tid, loglevel, etc */
+#define MAX_LOG_LENGTH 900
 
 void init_logger(char* logdir, int log_level);
-void set_log_level(int log_level);
+void change_log_level(int log_level);
 
 /* time                     tid   level user message
  * 20170707 11:11:11.125737 23612 INFO Receive request from ...  */
