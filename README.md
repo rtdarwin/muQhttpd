@@ -30,12 +30,9 @@ mkdir cmake-build && cd cmake-build && cmake .. && make
 
 ## 3. Run
 
-muQhttpd arranges its files in three seperate directories(default `./www, ./conf ./log`). You can ovveride each default directory by specifying it on the command line.
+muQhttpd arranges its files in three seperate directories(default `./www, ./conf ./log`). You can ovveride each default directory by specifying it in the configuration file `logdir/muqhttpd.conf`, then use `--confdir|-c` option to tell muQhttpd.
 
-
-`muqhttpd [--wwwdir www-dir]
-          [--confdir conf-dir]
-          [--logdir log-dir]`
+`muqhttpd [--confdir|-c conf-dir]`
 
 If one of the directories not exists, muQhttpd will report a error on `stderr` and exit.
 
@@ -52,6 +49,8 @@ Configuration file specifies:
 1. IPv4 address to bind and listen.
 1. Maximum thread number allowed.
 1. Log level
+1. WWW directory, which is used as the webroot
+1. Log directory
 
 ### 4.2. Bind & Listen Address
 
