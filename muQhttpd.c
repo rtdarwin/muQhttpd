@@ -63,6 +63,13 @@ main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
+    int on = 1;
+    if ((setsockopt(srv_sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))) ==
+        -1) {
+        fprintf(stderr, "Couldn't use setsockopt to set SO_REUSEADDR\n");
+        exit(EXIT_FAILURE);
+    }
+
     memset(&srv_sockaddr, 0, sizeof(srv_sockaddr));
     srv_sockaddr.sin_family = AF_INET;
     srv_sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);

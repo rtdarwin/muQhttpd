@@ -182,6 +182,7 @@ handle_http(int sockfd)
         goto bad_request;
     }
 
+    // FIXME: use 'stat' to check file, do not open it
     if ((localfd = open(localfile, O_RDONLY)) == -1) {
         goto not_found;
     }

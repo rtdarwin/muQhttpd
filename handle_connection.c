@@ -19,7 +19,16 @@ conn_handler_thread(void* cl_info)
          info->ipv4addr, info->port, info->sockfd);
 
     handle_http(info->sockfd);
+
+    /* The invoke of shutdown is **necessary**,
+     * or server will send a TCP RST to client when invoking close
+     * if there are still some data in the receive queue.
+     */
+
+    shutdown(info->sockfd, SHUT_WR);
     close(info->sockfd);
+    alog(LOG_LEVEL_INFO, "Close connection to %s:%ld", info->ipv4addr,
+         (long)info->port);
 
     free(cl_info);
     sem_post(&tot_threads_avail_);
