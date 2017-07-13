@@ -26,6 +26,8 @@ log_backend_thread(void* unused)
     char log_name[256];
     snprintf(log_name, 256, "%s/muQhttpd.log", logdir_);
 
+    fprintf(stderr, "log_name: %s\n", log_name);
+
     int o_flags = O_WRONLY | O_APPEND | O_CREAT;
     mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH; /* rw-r--r-- */
     logfd_ = open(log_name, o_flags, perms);

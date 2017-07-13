@@ -124,9 +124,7 @@ alog(int log_level, char* fmt, ...)
             break;
     }
 
-    // '__thread' ensure every thread have its own logbuf
-    // to avoid race condition
-    static __thread char logbuf[MAX_LOG_LENGTH];
+    char logbuf[MAX_LOG_LENGTH];
     int tot_written = 0;
 
     /*  1. time  */

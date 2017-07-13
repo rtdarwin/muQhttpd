@@ -1,17 +1,33 @@
 #include "read_conf.h"
 #include "async_log.h"
 #include <stdlib.h>
+#include <string.h>
 
-static struct muQconf conf;
+static char* confdir_;
+static struct muQconf conf_;
 
-struct muQconf*
-read_conf(char* conf_dir)
+int
+read_conf_file(char* dir, struct muQconf* conf_ret)
 {
-    // FIXME: now return a fake muQconf
+    /*  1. Set default value */
 
-    conf.v4port = 4000;
-    conf.log_level = LOG_LEVEL_DEBUG;
-    conf.max_thread_num = 1024;
+    conf_.v4port = 4000;
+    conf_.log_level = LOG_LEVEL_DEBUG;
+    conf_.max_thread_num = 1024;
+    strcpy(conf_.logdir, "./log");
+    strcpy(conf_.wwwdir, "./www");
 
-    return &conf;
+    /*  2. Read file to override default conf */
+
+    confdir_ = dir;
+    // TODO
+
+    *conf_ret = conf_;
+    return 0;
+}
+
+struct muQconf
+get_conf()
+{
+    return conf_;
 }

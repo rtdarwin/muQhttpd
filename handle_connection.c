@@ -6,6 +6,7 @@
 #include <semaphore.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static sem_t tot_threads_avail_;
 
@@ -18,6 +19,7 @@ conn_handler_thread(void* cl_info)
          info->ipv4addr, info->port, info->sockfd);
 
     handle_http(info->sockfd);
+    close(info->sockfd);
 
     free(cl_info);
     sem_post(&tot_threads_avail_);
