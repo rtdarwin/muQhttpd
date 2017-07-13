@@ -17,10 +17,14 @@ muQhttpd - A simple `one thread per connection` http server.
 
 ## 1. Supported Features
 
+- [x] handle HTTP request line & HTTP resonse line, HTTP headers are ommited(including Conetent-Length and Conetent-Type)
 - [x] HTTP GET to distribute static web resources(.html, .js, .css, .jpg etc)
+- [ ] HTTP GET or POST to execute cgi in `/cgi-bin` path
 - [ ] others
 
 ## 2. Build
+
+muQhttpd is supposed to be build in a Linux environment, because it contains several linux-specific features.
 
 Run the command below with a POSIX-compatible shell.
 
@@ -29,6 +33,8 @@ mkdir cmake-build && cd cmake-build && cmake .. && make
 ```
 
 ## 3. Run
+
+muQhttpd is supposed to run in a Linux environment, because it contains several linux-specific features.
 
 muQhttpd arranges its files in three seperate directories(default `./www, ./conf ./log`). You can ovveride each default directory by specifying it in the configuration file `logdir/muqhttpd.conf`, then use `--confdir|-c` option to tell muQhttpd.
 
