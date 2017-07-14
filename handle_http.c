@@ -1,6 +1,6 @@
 #include "handle_http.h"
 #include "async_log.h"
-#include "exec_cgi.h"
+#include "handle_cgi.h"
 #include "read_conf.h"
 
 #include <ctype.h>
@@ -69,23 +69,16 @@ read_request_line(int sockfd, struct http_request_line* line)
     return nitems;
 }
 
-/* Return numbers of characters read, or -1 on error
- */
 static ssize_t
-read_request_body(int sockfd, char* body, int* len)
+send_response_str(int sockfd, const char* str)
 {
-}
-
-static ssize_t
-send_response_line(int sockfd, const char* line)
-{
-    ssize_t linelen = strlen(line);
+    ssize_t len = strlen(str);
     ssize_t nwritten = 0;
     ssize_t tot_written = 0;
 
-    const char* pbuf = line;
-    while (tot_written < linelen) {
-        nwritten = write(sockfd, pbuf, linelen - tot_written);
+    const char* pbuf = str;
+    while (tot_written < len) {
+        nwritten = write(sockfd, pbuf, len - tot_written);
         if (nwritten == -1 && errno == EINTR)
             continue;
         else
@@ -101,27 +94,27 @@ send_response_line(int sockfd, const char* line)
 }
 
 static ssize_t
-url_to_local_file(const char* url_path, char* localfile, int len)
+url_to_local_path(const char* url_path, char* localpath, int len)
 {
     ssize_t namelen = -1;
 
-    /*  1. Local file prefix(wwwdir) */
+    /*  1. Local path prefix(wwwdir/) */
 
     struct muQconf conf = get_conf();
-    strcpy(localfile, conf.wwwdir);
-    localfile += strlen(conf.wwwdir);
+    strcpy(localpath, conf.wwwdir);
+    localpath += strlen(conf.wwwdir);
 
     /*  1. Find the location of first slash */
 
     char* first_slash = NULL;
     if ((first_slash = strchr(url_path, '/')) == NULL) {
-        strcpy(localfile, "/index.html");
+        strcpy(localpath, "/index.html");
         return 11;
     }
 
     // Case that request url path contains only '/'
     if (strlen(first_slash) == 1) {
-        strcpy(localfile, "/index.html");
+        strcpy(localpath, "/index.html");
         return 11;
     }
 
@@ -130,23 +123,38 @@ url_to_local_file(const char* url_path, char* localfile, int len)
      */
 
     namelen = strlen(first_slash);
-    strncpy(localfile, first_slash, len);
+    strncpy(localpath, first_slash, len);
 
     /*  3. If bad path */
 
-    if (strstr(localfile, "../") != NULL)
+    if (strstr(localpath, "../") != NULL)
         namelen = -1;
 
     return namelen;
 }
 
-static void
-serve_file(int sockfd, int localfd)
+static int
+serve_file(int sockfd, char* localpath)
 {
+    int fd;
+    if ((fd = open(localpath, O_RDONLY)) == -1) {
+        alog(LOG_LEVEL_ERROR, "Can't open file '%s'", localpath);
+        return -1;
+    }
+
     /* The last paramater of sendfile specify max bytes to send,
-     * We want to send the whole file, so set it 102400bytes = 10MB
+     * We want to send the whole file, so set it 100000bytes = 10MB
      */
-    sendfile(sockfd, localfd, NULL, 100000);
+    if (sendfile(sockfd, fd, NULL, 100000) != -1) {
+        alog(LOG_LEVEL_INFO, "Send file '%s' to client", localpath);
+        return 0;
+    } else {
+        alog(LOG_LEVEL_ERROR, "Can't send file '%s' to client", localpath);
+        return -1;
+    }
+
+    // Never reach here
+    return 0;
 }
 
 void
@@ -154,12 +162,11 @@ handle_http(int sockfd)
 {
     struct http_request_line reqline;
     memset(&reqline, 0, sizeof(struct http_request_line));
-    char body[4096] = { 0 };
 
     /*  1. Is http? */
 
     if (read_request_line(sockfd, &reqline) < 2) {
-        goto not_http;
+        goto bad_request;
     }
 
     alog(LOG_LEVEL_INFO, "Client HTTP request line: %s, %s, %s, %s",
@@ -173,66 +180,73 @@ handle_http(int sockfd)
         goto not_implemented;
     }
 
-    /*  3. Does responding local file found and can be opened? */
+    /*  3. Static resources or CGI scripts? */
 
-    int localfd;
-    char localfile[512] = { 0 };
+    char localpath[512] = { 0 };
 
-    if (url_to_local_file(reqline.url_path, localfile, 511) == -1) {
+    if (url_to_local_path(reqline.url_path, localpath, 511) == -1) {
         goto bad_request;
     }
 
-    // FIXME: use 'stat' to check file, do not open it
-    if ((localfd = open(localfile, O_RDONLY)) == -1) {
-        goto not_found;
-    }
+    if (is_cgi_path(localpath)) {
+        alog(LOG_LEVEL_INFO, "Client HTTP request CGI script: %s", localpath);
 
-    /*  4. Static resources or CGI? */
+        // Whatever, send OK
+        send_response_str(sockfd, "HTTP/1.1 200 OK\r\n\r\n");
+        if (exec_cgi(localpath, reqline.method, reqline.url_qstring, sockfd) ==
+            -1) {
+            alog(LOG_LEVEL_WARN, "CGI script '%s' not on server", localpath);
 
-    if (strcasecmp(localfile, "cgi-bin") == 0) {
-        /* CGI */
-        alog(LOG_LEVEL_INFO, "Client HTTP request cgi: %s", localfile);
-
-        // FIXME: request body and CGI standard
-        exec_cgi(localfd, reqline.url_qstring, sockfd);
+            char path_notfound[512];
+            snprintf(path_notfound, 512, "%s/404_not_found.html",
+                     get_conf().wwwdir);
+            serve_file(sockfd, path_notfound);
+        }
 
     } else {
-        /* Static resource */
-        alog(LOG_LEVEL_INFO, "Know client HTTP request file: %s", localfile);
+        if (access(localpath, F_OK | R_OK) != 0) {
+            goto not_found;
+        }
 
-        send_response_line(sockfd, "HTTP/1.1 200 OK\r\n\r\n");
-        serve_file(sockfd, localfd);
+        alog(LOG_LEVEL_INFO, "Client HTTP request file: %s", localpath);
 
-        alog(LOG_LEVEL_INFO, "Send file %s to client", localfile);
+        send_response_str(sockfd, "HTTP/1.1 200 OK\r\n\r\n");
+        serve_file(sockfd, localpath);
     }
 
     return;
 
-not_http:
-    alog(LOG_LEVEL_WARN,
-         "Client doesn't send a well-formed HTTP request: %s, %s, %s, %s",
-         reqline.method, reqline.url_path, reqline.url_qstring,
-         reqline.version);
-    send_response_line(sockfd, "HTTP/1.1 400 Bad Request\r\n\r\n");
-
-    return;
 bad_request:
     alog(LOG_LEVEL_WARN,
          "Client doesn't send a well-formed HTTP request: %s, %s, %s, %s",
          reqline.method, reqline.url_path, reqline.url_qstring,
          reqline.version);
-    send_response_line(sockfd, "HTTP/1.1 400 Bad Request\r\n\r\n");
+    send_response_str(sockfd, "HTTP/1.1 400 Bad Request\r\n\r\n");
+
+    char path_badrequest[512];
+    snprintf(path_badrequest, 512, "%s/400_bad_request.html",
+             get_conf().wwwdir);
+    serve_file(sockfd, path_badrequest);
 
     return;
 not_found:
-    alog(LOG_LEVEL_INFO, "Client request file '%s' not on server", localfile);
-    send_response_line(sockfd, "HTTP/1.1 404 Not Found\r\n\r\n");
+    alog(LOG_LEVEL_INFO, "Client request '%s' not on server", localpath);
+    send_response_str(sockfd, "HTTP/1.1 404 Not Found\r\n\r\n");
+
+    char path_notfound[512];
+    snprintf(path_notfound, 512, "%s/404_not_found.html", get_conf().wwwdir);
+    serve_file(sockfd, path_notfound);
 
     return;
 not_implemented:
     alog(LOG_LEVEL_INFO, "Client request method '%s' not implemented",
          reqline.method);
-    send_response_line(sockfd, "HTTP/1.1 501 Not Implemented\r\n\r\n");
+    send_response_str(sockfd, "HTTP/1.1 501 Not Implemented\r\n\r\n");
+
+    char path_notimplemented[512];
+    snprintf(path_notimplemented, 512, "%s/501_not_implemented.html",
+             get_conf().wwwdir);
+    serve_file(sockfd, path_notimplemented);
 
     return;
 }

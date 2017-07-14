@@ -10,6 +10,7 @@ struct muQconf
     int log_level;
     char wwwdir[512];
     char logdir[512];
+    char cgibindir[512];
 };
 
 /* Store the conf in param#2 conf, return -1 if conf file contains error */

@@ -16,6 +16,7 @@ read_conf_file(char* dir, struct muQconf* conf_ret)
     conf_.max_thread_num = 1024;
     strcpy(conf_.logdir, "./log");
     strcpy(conf_.wwwdir, "./www");
+    strcpy(conf_.cgibindir, "./www/cgi-bin");
 
     /*  2. Read file to override default conf */
 
