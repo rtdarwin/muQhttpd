@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define min(m, n) ((m) < (n) ? (m) : (n))
+
 struct http_request_line
 {
     char method[8];
@@ -96,7 +98,7 @@ send_response_str(int sockfd, const char* str)
 static ssize_t
 url_to_local_path(const char* url_path, char* localpath, int len)
 {
-    ssize_t namelen = -1;
+    ssize_t pathlen = -1;
 
     /*  1. Local path prefix(wwwdir/) */
 
@@ -122,15 +124,16 @@ url_to_local_path(const char* url_path, char* localpath, int len)
      *     (including the first  slash)
      */
 
-    namelen = strlen(first_slash);
-    strncpy(localpath, first_slash, len);
+    /* Truncate if too long */
+    pathlen = min(strlen(first_slash), len - strlen(conf.wwwdir));
+    strncpy(localpath, first_slash, pathlen);
 
     /*  3. If bad path */
 
     if (strstr(localpath, "../") != NULL)
-        namelen = -1;
+        pathlen = -1;
 
-    return namelen;
+    return pathlen;
 }
 
 static int

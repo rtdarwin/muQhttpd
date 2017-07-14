@@ -59,9 +59,6 @@ write_log(char* buf, size_t buf_len)
 {
     size_t msglen = min(buf_len, max_msg_len_);
     mq_send(msgq_, buf, msglen, 0);
-
-    // for debug use when developing
-    write(STDOUT_FILENO, buf, buf_len);
 }
 
 void
