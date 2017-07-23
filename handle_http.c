@@ -150,6 +150,7 @@ serve_file(int sockfd, char* localpath)
      */
     if (sendfile(sockfd, fd, NULL, 100000) != -1) {
         alog(LOG_LEVEL_INFO, "Send file '%s' to client", localpath);
+        close(fd);
         return 0;
     } else {
         alog(LOG_LEVEL_ERROR, "Can't send file '%s' to client", localpath);

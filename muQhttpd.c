@@ -24,8 +24,8 @@ main(int argc, char* argv[])
     strcpy(confdir, "./conf"); // default
 
     if (argc != 1) {
-        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help")) {
-            fprintf(stderr, "Usage:\n  muqhttpd --confdir|-c conf-dir] ");
+        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+            fprintf(stderr, "Usage:\n  1muqhttpd --confdir|-c conf-dir] ");
             exit(EXIT_FAILURE);
         }
 
